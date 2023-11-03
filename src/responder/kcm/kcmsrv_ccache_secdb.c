@@ -35,7 +35,7 @@
 #include "providers/krb5/krb5_ccache.h"
 
 #define KCM_SECDB_URL        "persistent"
-#define KCM_SECDB_BASE_FMT    KCM_SECDB_URL"/%"SPRIuid"/"
+#define KCM_SECDB_BASE_FMT    KCM_SECDB_URL"/%"SPRIuid"/%s/"
 #define KCM_SECDB_CCACHE_FMT  KCM_SECDB_BASE_FMT"ccache/"
 #define KCM_SECDB_DFL_FMT     KCM_SECDB_BASE_FMT"default"
 
@@ -112,7 +112,8 @@ static const char *secdb_container_url_create(TALLOC_CTX *mem_ctx,
 {
     return talloc_asprintf(mem_ctx,
                            KCM_SECDB_CCACHE_FMT,
-                           cli_creds_get_uid(client));
+                           cli_creds_get_uid(client),
+                           cli_creds_get_sepath(client));
 }
 
 static const char *secdb_cc_url_create(TALLOC_CTX *mem_ctx,
@@ -122,6 +123,7 @@ static const char *secdb_cc_url_create(TALLOC_CTX *mem_ctx,
     return talloc_asprintf(mem_ctx,
                            KCM_SECDB_CCACHE_FMT"%s",
                            cli_creds_get_uid(client),
+                           cli_creds_get_sepath(client),
                            secdb_key);
 }
 
@@ -130,7 +132,8 @@ static const char *secdb_dfl_url_create(TALLOC_CTX *mem_ctx,
 {
     return talloc_asprintf(mem_ctx,
                            KCM_SECDB_DFL_FMT,
-                           cli_creds_get_uid(client));
+                           cli_creds_get_uid(client),
+                           cli_creds_get_sepath(client));
 }
 
 static errno_t kcm_ccache_to_secdb_kv(TALLOC_CTX *mem_ctx,

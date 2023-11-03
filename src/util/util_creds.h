@@ -29,6 +29,8 @@ typedef context_t SELINUX_CTX;
 #include <selinux/selinux.h>
 typedef char * SEC_CTX;
 
+#define SELINUX_DISABLED_CONTEXT "-"
+
 #define SELINUX_context_new context_new
 #define SELINUX_context_free context_free
 #define SELINUX_context_str context_str
@@ -38,6 +40,9 @@ typedef char * SEC_CTX;
 #define SELINUX_context_range_get context_range_get
 #define SELINUX_getpeercon getpeercon
 #define SELINUX_freecon freecon
+
+#define cli_creds_get_selabel(x) (x->selinux_ctx)
+#define cli_creds_get_sepath(x)  (x->selinux_path)
 
 #else /* not HAVE_SELINUX */
 
@@ -53,6 +58,9 @@ typedef void * SEC_CTX;
 #define SELINUX_context_role_get SELINUX_context_dummy_get
 #define SELINUX_context_range_get SELINUX_context_dummy_get
 
+#define cli_creds_get_selabel(x) (NULL)
+#define cli_creds_get_sepath(x)  "-"
+
 #include <errno.h>
 #define SELINUX_getpeercon(x, y) -1; do { \
     *(y) = NULL; \
@@ -67,7 +75,10 @@ typedef void * SEC_CTX;
 #include <sys/socket.h>
 struct cli_creds {
     struct ucred ucred;
+#ifdef HAVE_SELINUX
     SELINUX_CTX selinux_ctx;
+    const char *selinux_path;
+#endif
 };
 
 #define cli_creds_get_uid(x) (x->ucred.uid)
@@ -75,7 +86,10 @@ struct cli_creds {
 
 #else /* not HAVE_UCRED */
 struct cli_creds {
+#ifdef HAVE_SELINUX
     SELINUX_CTX selinux_ctx;
+    const char *selinux_path;
+#endif
 };
 #define cli_creds_get_uid(x) (-1)
 #define cli_creds_get_gid(x) (-1)

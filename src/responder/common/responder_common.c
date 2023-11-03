@@ -95,12 +95,34 @@ static void client_close_fn(struct tevent_context *ev,
     ctx->cfd = -1;
 }
 
+/* Convert the label to a string usable in an LDAP RDN.
+ * Commas (,) are replaced by dots (.).
+ */
+static char *label_to_path(TALLOC_CTX *mem_ctx, const char *secctx)
+{
+    char *p;
+    char *path;
+
+    path = talloc_strdup(mem_ctx, secctx);
+    if (path == NULL) {
+        return NULL;
+    }
+
+    p = path;
+    while ((p = strchr(p, ',')) != NULL) {
+        *p = '.';
+        p++;
+    }
+
+    return path;
+}
+
 static errno_t get_client_cred(struct cli_ctx *cctx)
 {
     SEC_CTX secctx;
-    int ret;
+    int ret = EOK;
 
-    cctx->creds = talloc_zero(cctx, struct cli_creds);
+    cctx->creds = talloc(cctx, struct cli_creds);
     if (!cctx->creds) return ENOMEM;
 
 #ifdef HAVE_UCRED
@@ -150,20 +172,36 @@ static errno_t get_client_cred(struct cli_ctx *cctx)
           cctx->creds->ucred.pid, cmd_line);
 #endif
 
+#ifdef HAVE_SELINUX
     ret = SELINUX_getpeercon(cctx->cfd, &secctx);
     if (ret != 0) {
-        ret = errno;
         DEBUG(SSSDBG_MINOR_FAILURE,
-              "The following failure is expected to happen in case SELinux is disabled:\n"
               "SELINUX_getpeercon failed [%d][%s].\n"
-              "Please, consider enabling SELinux in your system.\n", ret, strerror(ret));
+              "This failure is expected to happen in case SELinux is disabled.\n"
+              "Please, consider enabling SELinux in your system.\n",
+              errno, strerror(errno));
         /* This is not fatal, as SELinux may simply be disabled */
+        cctx->creds->selinux_ctx = NULL;
         ret = EOK;
     } else {
+        DEBUG(SSSDBG_TRACE_ALL,
+              "Client [%p][%d] label: %s\n", cctx, cctx->cfd, secctx);
+        cctx->creds->selinux_path = label_to_path(cctx->creds, secctx);
+        if (cctx->creds->selinux_path == NULL) {
+            SELINUX_freecon(secctx);
+            ret = ENOMEM;
+            goto done;
+        }
         cctx->creds->selinux_ctx = SELINUX_context_new(secctx);
         SELINUX_freecon(secctx);
+        if (cctx->creds->selinux_ctx == NULL) {
+            ret = ENOMEM;
+            goto done;
+        }
     }
+#endif /* HAVE_LINUX */
 
+done:
     return ret;
 }
 
@@ -479,12 +517,12 @@ static int cli_ctx_destructor(struct cli_ctx *cctx)
         return 0;
     }
 
-    if (cctx->creds->selinux_ctx == NULL) {
-        return 0;
+#ifdef HAVE_SELINUX
+    if (cctx->creds->selinux_ctx != NULL) {
+        SELINUX_context_free(cctx->creds->selinux_ctx);
+        cctx->creds->selinux_ctx = NULL;
     }
-
-    SELINUX_context_free(cctx->creds->selinux_ctx);
-    cctx->creds->selinux_ctx = NULL;
+#endif
 
     return 0;
 }
