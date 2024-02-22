@@ -30,6 +30,7 @@ def public_keys(moduledatadir: str) -> list[str]:
     return keys
 
 
+@pytest.mark.builtwith("ssh-known-hosts-proxy")
 @pytest.mark.ticket(gh=5518)
 @pytest.mark.importance("low")
 @pytest.mark.topology(KnownTopology.IPA)
@@ -60,6 +61,7 @@ def test_sss_ssh_knownhosts__by_name(client: Client, ipa: IPA, public_keys: list
         assert f"{hostname} {key}" in result.stdout_lines
 
 
+@pytest.mark.builtwith("ssh-known-hosts-proxy")
 @pytest.mark.ticket(gh=5518)
 @pytest.mark.importance("low")
 @pytest.mark.topology(KnownTopology.IPA)
@@ -92,6 +94,7 @@ def test_sss_ssh_knownhosts__by_shortname(client: Client, ipa: IPA, public_keys:
         assert f"ssh {key}" in result.stdout_lines
 
 
+@pytest.mark.builtwith("ssh-known-hosts-proxy")
 @pytest.mark.ticket(gh=5518)
 @pytest.mark.importance("low")
 @pytest.mark.topology(KnownTopology.IPA)
