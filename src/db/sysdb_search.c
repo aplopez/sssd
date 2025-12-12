@@ -906,6 +906,8 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
         goto done;
     }
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] (1) attr=%s, filter=%s\n", attr, attr_filter);
+
     /* Do not look for the user's attribute in the timestamp db as it could
      * not be present. Only look for the name. */
     if (attr == NULL || is_sysdb_name(attr)) {
@@ -929,19 +931,26 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
             goto done;
         }
 
-        ret = sysdb_enum_dn_filter(tmp_ctx, &ts_res, attr_filter, domain->name,
-                                   &dn_filter);
-        if (ret != EOK) {
-            goto done;
-        }
+        if (ret == EOK) {
+            DEBUG(SSSDBG_IMPORTANT_INFO, "[ALE] (2.1) ts_res.count=%u\n", ts_res.count);
 
-        DEBUG(SSSDBG_TRACE_LIBS, "Searching timestamp entries with [%s]\n",
-              dn_filter);
+            ret = sysdb_enum_dn_filter(tmp_ctx, &ts_res, attr_filter, domain->name,
+                                    &dn_filter);
+            if (ret != EOK) {
+                goto done;
+            }
 
-        ret = sysdb_search_ts_matches(tmp_ctx, domain->sysdb, attrs, &ts_res,
-                                      dn_filter, &ts_cache_res);
-        if (ret != EOK && ret != ENOENT) {
-            goto done;
+            DEBUG(SSSDBG_TRACE_LIBS, "Searching timestamp entries with [%s]\n",
+                dn_filter);
+
+            ret = sysdb_search_ts_matches(tmp_ctx, domain->sysdb, attrs, &ts_res,
+                                        dn_filter, &ts_cache_res);
+            if (ret != EOK && ret != ENOENT) {
+                goto done;
+            }
+            if (ret == EOK) {
+                DEBUG(SSSDBG_TRACE_LIBS, "[ALE] (2.2) ts_cache_res->count=%u\n", ts_cache_res->count);
+            }
         }
     }
 
@@ -959,6 +968,7 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
         ret = sysdb_error_to_errno(ret);
         goto done;
     }
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] (3) res->count=%u\n", res->count);
 
     /* Merge in the timestamps from the fast ts db */
     ret = sysdb_merge_res_ts_attrs(domain->sysdb, res, attrs);
@@ -975,6 +985,7 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
             goto done;
         }
     }
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] (4) merged_res->count=%u\n", res->count);
 
     *_res = talloc_steal(mem_ctx, res);
 
