@@ -89,6 +89,7 @@ sdap_dom_enum_ex_send(TALLOC_CTX *memctx,
     int t;
     errno_t ret;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     req = tevent_req_create(memctx, &state, struct sdap_dom_enum_ex_state);
     if (req == NULL) return NULL;
 
@@ -119,9 +120,11 @@ sdap_dom_enum_ex_send(TALLOC_CTX *memctx,
         goto fail;
     }
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing 1\n");
     return req;
 
 fail:
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing 2\n");
     tevent_req_error(req, ret);
     tevent_req_post(req, ev);
     return req;
@@ -135,6 +138,7 @@ static errno_t sdap_dom_enum_ex_retry(struct tevent_req *req,
                                                 struct sdap_dom_enum_ex_state);
     struct tevent_req *subreq;
     errno_t ret;
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
 
     subreq = sdap_id_op_connect_send(op, state, &ret);
     if (subreq == NULL) {
@@ -144,6 +148,7 @@ static errno_t sdap_dom_enum_ex_retry(struct tevent_req *req,
     }
 
     tevent_req_set_callback(subreq, tcb, req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return EOK;
 }
 
@@ -175,6 +180,7 @@ static bool sdap_dom_enum_ex_connected(struct tevent_req *subreq)
 
 static void sdap_dom_enum_ex_get_users(struct tevent_req *subreq)
 {
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     struct tevent_req *req = tevent_req_callback_data(subreq,
                                                       struct tevent_req);
     struct sdap_dom_enum_ex_state *state = tevent_req_data(req,
@@ -192,10 +198,12 @@ static void sdap_dom_enum_ex_get_users(struct tevent_req *subreq)
         return;
     }
     tevent_req_set_callback(subreq, sdap_dom_enum_ex_users_done, req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 }
 
 static void sdap_dom_enum_ex_users_done(struct tevent_req *subreq)
 {
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     struct tevent_req *req = tevent_req_callback_data(subreq,
                                                       struct tevent_req);
     struct sdap_dom_enum_ex_state *state = tevent_req_data(req,
@@ -242,6 +250,7 @@ static void sdap_dom_enum_ex_users_done(struct tevent_req *subreq)
     }
 
     /* Continues to sdap_dom_enum_ex_get_groups */
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 }
 
 static void sdap_dom_enum_ex_get_groups(struct tevent_req *subreq)
@@ -442,6 +451,7 @@ static struct tevent_req *enum_users_send(TALLOC_CTX *memctx,
     int ret;
     bool use_mapping;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     req = tevent_req_create(memctx, &state, struct enum_users_state);
     if (!req) return NULL;
 
@@ -525,6 +535,7 @@ static struct tevent_req *enum_users_send(TALLOC_CTX *memctx,
      * search base at a time.
      */
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Filter=%s\n", state->filter);
     subreq = sdap_get_users_send(state, state->ev,
                                  state->sdom->dom,
                                  state->sdom->dom->sysdb,
@@ -541,9 +552,11 @@ static struct tevent_req *enum_users_send(TALLOC_CTX *memctx,
     }
     tevent_req_set_callback(subreq, enum_users_done, req);
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return req;
 
 fail:
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     tevent_req_error(req, ret);
     tevent_req_post(req, ev);
     return req;
@@ -551,6 +564,7 @@ fail:
 
 static void enum_users_done(struct tevent_req *subreq)
 {
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     struct tevent_req *req = tevent_req_callback_data(subreq,
                                                       struct tevent_req);
     struct enum_users_state *state = tevent_req_data(req,
@@ -583,6 +597,7 @@ static void enum_users_done(struct tevent_req *subreq)
               state->ctx->srv_opts->max_user_value);
 
     tevent_req_done(req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 }
 
 static errno_t enum_users_recv(struct tevent_req *req)

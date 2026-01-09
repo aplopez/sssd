@@ -87,6 +87,8 @@ errno_t ldap_id_setup_enumeration(struct be_ctx *be_ctx,
     period = dp_opt_get_int(id_ctx->opts->basic, SDAP_ENUM_REFRESH_TIMEOUT);
     offset = dp_opt_get_int(id_ctx->opts->basic, SDAP_ENUM_REFRESH_OFFSET);
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] period=%li, offset=%li\n", period, offset);
+
     ectx = talloc(sdom, struct ldap_enum_ctx);
     if (ectx == NULL) {
         return ENOMEM;
@@ -149,6 +151,8 @@ ldap_id_enumeration_send(TALLOC_CTX *mem_ctx,
     struct ldap_enum_ctx *ectx;
     errno_t ret;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
+
     req = tevent_req_create(mem_ctx, &state,
                             struct ldap_enumeration_state);
     if (req == NULL) {
@@ -178,11 +182,13 @@ ldap_id_enumeration_send(TALLOC_CTX *mem_ctx,
     }
 
     tevent_req_set_callback(subreq, ldap_enumeration_done, req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing 1\n");
     return req;
 
 fail:
     tevent_req_error(req, ret);
     tevent_req_post(req, ev);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing 2\n");
     return req;
 }
 
@@ -193,6 +199,8 @@ ldap_enumeration_done(struct tevent_req *subreq)
     struct tevent_req *req = tevent_req_callback_data(subreq,
                                                       struct tevent_req);
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
+
     ret = sdap_dom_enum_recv(subreq);
     talloc_zfree(subreq);
     if (ret != EOK) {
@@ -201,12 +209,15 @@ ldap_enumeration_done(struct tevent_req *subreq)
     }
 
     tevent_req_done(req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 }
 
 errno_t
 ldap_id_enumeration_recv(struct tevent_req *req)
 {
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     TEVENT_REQ_RETURN_ON_ERROR(req);
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return EOK;
 }

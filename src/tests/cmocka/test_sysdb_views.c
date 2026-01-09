@@ -1152,6 +1152,7 @@ static void test_sysdb_enumpwent_filter(void **state)
 
     ret = sysdb_enumpwent_filter(test_ctx, test_ctx->domain, NULL, NULL,
                                  NULL, &res);
+    assert_int_equal(ret, EOK);
     assert_int_equal(res->count, 3);
     order_ldb_res_msgs(res);
     assert_user_attrs(res->msgs[0], test_ctx->domain, "alice", false);
@@ -1468,7 +1469,10 @@ int main(int argc, const char *argv[])
         POPT_TABLEEND
     };
 
+#define ALL_TESTS "[ALE]"
+
     const struct CMUnitTest tests[] = {
+#ifdef ALL_TESTS
         cmocka_unit_test_setup_teardown(test_sysdb_store_override,
                                         test_sysdb_setup, test_sysdb_teardown),
         cmocka_unit_test_setup_teardown(test_sysdb_add_overrides_to_object,
@@ -1498,9 +1502,11 @@ int main(int argc, const char *argv[])
         cmocka_unit_test_setup_teardown(test_sysdb_enumpwent_views,
                                         test_enum_users_setup,
                                         test_enum_users_teardown),
+#endif
         cmocka_unit_test_setup_teardown(test_sysdb_enumpwent_filter,
                                         test_enum_users_setup,
                                         test_enum_users_teardown),
+#ifdef ALL_TESTS
         cmocka_unit_test_setup_teardown(test_sysdb_enumpwent_filter_views,
                                         test_enum_users_setup,
                                         test_enum_users_teardown),
@@ -1516,6 +1522,7 @@ int main(int argc, const char *argv[])
         cmocka_unit_test_setup_teardown(test_sysdb_enumgrent_filter_views,
                                         test_enum_groups_setup,
                                         test_enum_groups_teardown),
+#endif
     };
 
     /* Set debug level to invalid value so we can decide if -d 0 was used. */

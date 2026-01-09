@@ -207,6 +207,7 @@ int sdap_save_user(TALLOC_CTX *memctx,
     char *new_upn = NULL;
     bool is_posix = true;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     DEBUG(SSSDBG_TRACE_FUNC, "Save user\n");
 
     tmpctx = talloc_new(NULL);
@@ -668,6 +669,7 @@ done:
                user_name ? user_name : "Unknown");
     }
     talloc_free(tmpctx);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return ret;
 }
 
@@ -692,6 +694,7 @@ int sdap_save_users(TALLOC_CTX *memctx,
     time_t now;
     bool in_transaction = false;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     if (num_users == 0) {
         /* Nothing to do if there are no users */
         return EOK;
@@ -766,6 +769,7 @@ done:
         }
     }
     talloc_zfree(tmpctx);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return ret;
 }
 
@@ -813,6 +817,7 @@ struct tevent_req *sdap_search_user_send(TALLOC_CTX *memctx,
     struct tevent_req *req;
     struct sdap_search_user_state *state;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     req = tevent_req_create(memctx, &state, struct sdap_search_user_state);
     if (req == NULL) return NULL;
 
@@ -845,6 +850,7 @@ done:
         tevent_req_post(req, state->ev);
     }
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return req;
 }
 
@@ -854,6 +860,7 @@ static errno_t sdap_search_user_next_base(struct tevent_req *req)
     struct sdap_search_user_state *state;
     bool need_paging = false;
     int sizelimit = 0;
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
 
     state = tevent_req_data(req, struct sdap_search_user_state);
 
@@ -895,6 +902,7 @@ static errno_t sdap_search_user_next_base(struct tevent_req *req)
         return ENOMEM;
     }
     tevent_req_set_callback(subreq, sdap_search_user_process, req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 
     return EOK;
 }
@@ -910,6 +918,7 @@ static void sdap_search_user_process(struct tevent_req *subreq)
     struct sysdb_attrs **users;
     bool next_base = false;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     ret = sdap_get_and_parse_generic_recv(subreq, state,
                                           &count, &users);
     talloc_zfree(subreq);
@@ -966,6 +975,7 @@ static void sdap_search_user_process(struct tevent_req *subreq)
     }
 
     tevent_req_done(req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 }
 
 static void sdap_search_user_copy_batch(struct sdap_search_user_state *state,
@@ -974,6 +984,7 @@ static void sdap_search_user_copy_batch(struct sdap_search_user_state *state,
 {
     size_t copied;
     bool filter;
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
 
     /* Always copy all objects for wildcard lookups. */
     filter = state->lookup_type == SDAP_LOOKUP_SINGLE ? true : false;
@@ -986,12 +997,14 @@ static void sdap_search_user_copy_batch(struct sdap_search_user_state *state,
 
     state->count += copied;
     state->users[state->count] = NULL;
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 }
 
 int sdap_search_user_recv(TALLOC_CTX *memctx, struct tevent_req *req,
                           char **higher_usn, struct sysdb_attrs ***users,
                           size_t *count)
 {
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     struct sdap_search_user_state *state = tevent_req_data(req,
                                             struct sdap_search_user_state);
 
@@ -1009,6 +1022,7 @@ int sdap_search_user_recv(TALLOC_CTX *memctx, struct tevent_req *req,
 
     TEVENT_REQ_RETURN_ON_ERROR(req);
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return EOK;
 }
 
@@ -1045,6 +1059,7 @@ struct tevent_req *sdap_get_users_send(TALLOC_CTX *memctx,
     struct tevent_req *subreq;
     struct sdap_get_users_state *state;
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     req = tevent_req_create(memctx, &state, struct sdap_get_users_state);
     if (!req) return NULL;
 
@@ -1086,12 +1101,14 @@ done:
         tevent_req_error(req, ret);
         tevent_req_post(req, ev);
     }
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 
     return req;
 }
 
 static void sdap_get_users_done(struct tevent_req *subreq)
 {
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     struct tevent_req *req = tevent_req_callback_data(subreq,
                                                       struct tevent_req);
     struct sdap_get_users_state *state = tevent_req_data(req,
@@ -1127,11 +1144,13 @@ static void sdap_get_users_done(struct tevent_req *subreq)
     DEBUG(SSSDBG_TRACE_ALL, "Saving %zu Users - Done\n", state->count);
 
     tevent_req_done(req);
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
 }
 
 int sdap_get_users_recv(struct tevent_req *req,
                         TALLOC_CTX *mem_ctx, char **usn_value)
 {
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Starting\n");
     struct sdap_get_users_state *state = tevent_req_data(req,
                                             struct sdap_get_users_state);
 
@@ -1142,6 +1161,7 @@ int sdap_get_users_recv(struct tevent_req *req,
         *usn_value = talloc_steal(mem_ctx, state->higher_usn);
     }
 
+    DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Finishing\n");
     return EOK;
 }
 

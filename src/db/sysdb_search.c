@@ -829,16 +829,13 @@ static errno_t sysdb_enum_dn_filter(TALLOC_CTX *mem_ctx,
         return ENOMEM;
     }
 
-    if (name_filter == NULL) {
-        dn_filter = talloc_asprintf(tmp_ctx, "(|");
-    } else {
-        fqname = sss_create_internal_fqname(tmp_ctx, name_filter, domain);
-        if (fqname == NULL) {
-            ret = ENOMEM;
-            goto done;
-        }
-        dn_filter = talloc_asprintf(tmp_ctx, "(&(%s=%s)(|", SYSDB_NAME, fqname);
+    fqname = sss_create_internal_fqname(tmp_ctx, name_filter == NULL ? "*" : name_filter, domain);
+    if (fqname == NULL) {
+        ret = ENOMEM;
+        goto done;
     }
+
+    dn_filter = talloc_asprintf(tmp_ctx, "(&(%s=%s)(|", SYSDB_NAME, fqname);
     if (dn_filter == NULL) {
         ret = ENOMEM;
         goto done;
@@ -863,7 +860,8 @@ static errno_t sysdb_enum_dn_filter(TALLOC_CTX *mem_ctx,
         }
     }
 
-    dn_filter = talloc_asprintf_append(dn_filter, (name_filter == NULL ? ")" : "))"));
+//    dn_filter = talloc_asprintf_append(dn_filter, (name_filter == NULL ? ")" : "))"));
+    dn_filter = talloc_asprintf_append(dn_filter, "))");
     if (dn_filter == NULL) {
         ret = ENOMEM;
         goto done;
@@ -932,7 +930,7 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
         }
 
         if (ret == EOK) {
-            DEBUG(SSSDBG_IMPORTANT_INFO, "[ALE] (2.1) ts_res.count=%u\n", ts_res.count);
+            DEBUG(SSSDBG_TRACE_LIBS, "[ALE] (2.1) ts_res.count=%u\n", ts_res.count);
 
             ret = sysdb_enum_dn_filter(tmp_ctx, &ts_res, attr_filter, domain->name,
                                     &dn_filter);
@@ -940,14 +938,16 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
                 goto done;
             }
 
-            DEBUG(SSSDBG_TRACE_LIBS, "Searching timestamp entries with [%s]\n",
-                dn_filter);
+            // DEBUG(SSSDBG_TRACE_LIBS, "Searching timestamp entries with [%s]\n",
+            //     dn_filter);
 
+            DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Match start\n");
             ret = sysdb_search_ts_matches(tmp_ctx, domain->sysdb, attrs, &ts_res,
                                         dn_filter, &ts_cache_res);
             if (ret != EOK && ret != ENOENT) {
                 goto done;
             }
+            DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Match end\n");
             if (ret == EOK) {
                 DEBUG(SSSDBG_TRACE_LIBS, "[ALE] (2.2) ts_cache_res->count=%u\n", ts_cache_res->count);
             }
@@ -978,6 +978,7 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
         ret = EOK;
     }
 
+/*
     if (ts_cache_res != NULL) {
         res = sss_merge_ldb_results(res, ts_cache_res);
         if (res == NULL) {
@@ -986,6 +987,7 @@ int sysdb_enumpwent_filter(TALLOC_CTX *mem_ctx,
         }
     }
     DEBUG(SSSDBG_TRACE_LIBS, "[ALE] (4) merged_res->count=%u\n", res->count);
+*/
 
     *_res = talloc_steal(mem_ctx, res);
 
@@ -2739,8 +2741,10 @@ struct ldb_result *sss_merge_ldb_results(struct ldb_result *sysdb_res,
     count = sysdb_res->count;
     for (i = 0; i < ts_res->count; i++) {
         for (ii = 0; ii < sysdb_res->count; ii++) {
+            DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Comparing: %lu and %lu\n", i, ii);
             ret = ldb_dn_compare(ts_res->msgs[i]->dn, sysdb_res->msgs[ii]->dn);
             if (ret == 0) {
+                DEBUG(SSSDBG_TRACE_LIBS, "[ALE] Equal DNs\n");
                 break;
             }
         }
@@ -2752,6 +2756,7 @@ struct ldb_result *sss_merge_ldb_results(struct ldb_result *sysdb_res,
             continue;
         }
         /* new DN, merge */
+        DEBUG(SSSDBG_TRACE_LIBS, "[ALE] New DN merge\n");
         sysdb_res->msgs[count] = talloc_steal(sysdb_res, ts_res->msgs[i]);
         count++;
     }
