@@ -368,7 +368,7 @@ static int mbof_append_addop(struct mbof_add_ctx *add_ctx,
                              struct mbof_dn_array *parents,
                              struct ldb_dn *entry_dn)
 {
-    struct mbof_add_operation *lastop = NULL;
+    struct mbof_add_operation *lastop;
     struct mbof_add_operation *addop;
     const char *entry_dn_linearized = ldb_dn_get_linearized(entry_dn);
 
@@ -378,21 +378,13 @@ static int mbof_append_addop(struct mbof_add_ctx *add_ctx,
 
     /* test if this is a duplicate */
     /* FIXME: this is not efficient */
-    if (add_ctx->add_list) {
-        do {
-            if (lastop) {
-                lastop = lastop->next;
-            } else {
-                lastop = add_ctx->add_list;
-            }
-
-            /* FIXME: check if this is right, might have to compare parents */
-            if (sss_linearized_dn_match(ldb_dn_get_linearized(lastop->entry_dn),
-                                       entry_dn_linearized)) {
-                /* duplicate found */
-                return LDB_SUCCESS;
-            }
-        } while (lastop->next);
+    for (lastop = add_ctx->add_list; lastop != NULL; lastop = lastop->next) {
+        /* FIXME: check if this is right, might have to compare parents */
+        if (sss_linearized_dn_match(ldb_dn_get_linearized(lastop->entry_dn),
+                                    entry_dn_linearized)) {
+            /* duplicate found */
+            return LDB_SUCCESS;
+        }
     }
 
     addop = talloc_zero(add_ctx, struct mbof_add_operation);
