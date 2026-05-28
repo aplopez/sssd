@@ -13,7 +13,7 @@ import pytest
 from sssd_test_framework.roles.client import Client
 from sssd_test_framework.roles.generic import GenericADProvider
 from sssd_test_framework.roles.ipa import IPA
-from sssd_test_framework.topology import KnownTopologyGroup
+from sssd_test_framework.topology import KnownTopology, KnownTopologyGroup
 
 
 @pytest.mark.importance("low")
@@ -317,3 +317,29 @@ def test_ipa_trusts__change_view(client: Client, ipa: IPA, trusted: GenericADPro
 
     result = client.tools.getent.passwd(aduser)
     assert result is not None, f"{aduser} not found after view change!"
+
+
+@pytest.mark.importance("low")
+@pytest.mark.topology(KnownTopology.IPATrustAD)
+def test_ipa_trusts__sudo_with_view(client: Client, ipa: IPA, trusted: GenericADProvider):
+    """
+    :title: Sudo works with IPA trust and ID views
+    """
+    # Create user "user1" in AD with the default password and add to the group
+    trusted.user("user1").add(password="Secret123")
+    user1_fqn = trusted.fqn("user1")
+
+    # Enable SSH and sudo responders, and restart SSSD to enable AD authentication
+    client.sssd.common.sudo()
+    client.sssd.enable_responder("ssh")
+    client.sssd.start()
+
+    # Ensure the AD user is resolvable on the client
+    result = client.tools.getent.passwd(user1_fqn)
+    assert result is not None, f"AD user '{user1_fqn}' not found on client"
+
+    # Verify SSH authentication works for the AD user before applying the view
+    # Using client.auth.ssh.password() which handles Kerberos authentication properly
+    assert client.auth.ssh.password(
+        user1_fqn, "Secret123"
+    ), f"SSH authentication failed for {user1_fqn} before applying view"
